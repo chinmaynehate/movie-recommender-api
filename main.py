@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
-from inference import MovieRecommenderInference  # Adjusted import path
+from inference import MovieRecommenderInference  
 import uvicorn
 
 # Initialize FastAPI app
@@ -24,10 +24,11 @@ app.add_middleware(
 # Initialize the recommender model
 model = MovieRecommenderInference()
 
+# Define Pydantic models for the response
 class MovieRecommendation(BaseModel):
     title: str
     similarity_score: float
-    year: Optional[str]
+    year: Optional[str] = None
     genres: List[str]
     vote_average: float
     vote_count: int
@@ -46,15 +47,26 @@ async def health_check():
 @app.get("/recommend/{movie_title}", response_model=RecommendationResponse)
 async def get_recommendations(movie_title: str, n_recommendations: int = 5):
     try:
+        # Get full recommendations from the model
         recommendations = model.get_recommendations(movie_title, n_recommendations)
-        # Extract only the movie titles
-        titles = [rec['title'] for rec in recommendations]
-        
-        # Return the list of titles wrapped in 'recommendations' key
-        return {"recommendations": titles}
+
+        # Ensure the response matches the Pydantic model
+        formatted_recommendations = [
+            MovieRecommendation(
+                title=rec["title"],
+                similarity_score=rec["similarity_score"],
+                year=rec.get("year"),
+                genres=rec.get("genres", []),
+                vote_average=rec["vote_average"],
+                vote_count=rec["vote_count"]
+            )
+            for rec in recommendations
+        ]
+
+        # Return recommendations in the expected format
+        return {"recommendations": formatted_recommendations}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
