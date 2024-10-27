@@ -3,4 +3,3 @@ __pycache__/
 *.csv
 cache/
 *.log
-model/*.joblib
