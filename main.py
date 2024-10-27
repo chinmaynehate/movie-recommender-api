@@ -47,7 +47,11 @@ async def health_check():
 async def get_recommendations(movie_title: str, n_recommendations: int = 5):
     try:
         recommendations = model.get_recommendations(movie_title, n_recommendations)
-        return {"recommendations": recommendations}
+        # Extract only the movie titles
+        titles = [rec['title'] for rec in recommendations]
+        
+        # Return the list of titles wrapped in 'recommendations' key
+        return {"recommendations": titles}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
